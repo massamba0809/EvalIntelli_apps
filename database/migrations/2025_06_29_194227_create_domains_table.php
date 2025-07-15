@@ -16,6 +16,8 @@ return new class extends Migration
             $table->string('name'); // "Logique/Math", "Programmation", etc.
             $table->string('slug')->unique();
             $table->text('prompt_template')->nullable(); // Template de prompt spécifique au domaine
+            $table->string('icon', 10)->nullable(); // Emoji pour l'icône
+            $table->text('description')->nullable(); // Description du domaine
             $table->timestamps();
         });
     }

@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use App\Models\Domain;
-use Illuminate\Support\Str;
 
 class DomainSeeder extends Seeder
 {
@@ -13,6 +12,20 @@ class DomainSeeder extends Seeder
      */
     public function run(): void
     {
+        // Supprimer seulement les domaines qui ne font pas partie des 4 principaux
+        $domainsToKeep = ['logique-math', 'programmation', 'traduction', 'chimie'];
+
+        $extraDomains = Domain::whereNotIn('slug', $domainsToKeep)->get();
+
+        if ($extraDomains->count() > 0) {
+            $this->command->info('🗑️ Suppression des domaines en trop...');
+            foreach ($extraDomains as $domain) {
+                $this->command->line("- Suppression: {$domain->name} ({$domain->slug})");
+                $domain->delete();
+            }
+        }
+
+        // Définir les 4 domaines principaux
         $domains = [
             [
                 'name' => 'Logique/Math',
@@ -43,130 +56,57 @@ Consignes :
                 'description' => 'Questions de développement, algorithmes, langages de programmation et architecture logicielle'
             ],
             [
-                'name' => 'Sciences',
-                'slug' => 'sciences',
-                'prompt_template' => 'Expliquez ce concept scientifique de manière claire et pédagogique : {question}
+                'name' => 'Traduction',
+                'slug' => 'traduction',
+                'prompt_template' => 'Voici une demande de traduction : {question}
+
+Veuillez fournir une traduction précise et naturelle en respectant :
+- Le sens exact du texte original
+- La grammaire et syntaxe de la langue cible
+- Le ton et le style appropriés au contexte
+- Les nuances culturelles si nécessaire
+
+Évitez les commentaires ou annotations entre crochets.',
+                'icon' => '🌐',
+                'description' => 'Questions de traduction entre différentes langues'
+            ],
+            [
+                'name' => 'Chimie',
+                'slug' => 'chimie',
+                'prompt_template' => 'Répondez à cette question de chimie en expliquant clairement les concepts : {question}
 
 Consignes :
-- Utilisez un langage accessible
+- Expliquez les mécanismes chimiques
+- Utilisez la nomenclature appropriée
 - Donnez des exemples concrets
-- Citez des sources fiables si nécessaire
-- Structurez votre explication
-- Précisez le domaine scientifique concerné',
-                'icon' => '🔬',
-                'description' => 'Questions de physique, chimie, biologie, astronomie et sciences naturelles'
-            ],
-            [
-                'name' => 'Histoire/Géographie',
-                'slug' => 'histoire-geographie',
-                'prompt_template' => 'Répondez à cette question d\'histoire ou de géographie avec précision et contexte : {question}
-
-Consignes :
-- Situez dans le temps et l\'espace
-- Donnez le contexte historique/géographique
-- Mentionnez les sources importantes
-- Expliquez les causes et conséquences
-- Soyez objectif et factuel',
-                'icon' => '🏛️',
-                'description' => 'Questions d\'histoire, géographie, civilisations et événements marquants'
-            ],
-            [
-                'name' => 'Littérature/Philosophie',
-                'slug' => 'litterature-philosophie',
-                'prompt_template' => 'Analysez cette question de littérature ou philosophie avec profondeur : {question}
-
-Consignes :
-- Développez une argumentation structurée
-- Citez des auteurs et œuvres pertinents
-- Explorez différentes perspectives
-- Utilisez un style soutenu
-- Concluez avec une synthèse personnelle',
-                'icon' => '📚',
-                'description' => 'Questions de littérature, philosophie, analyse de textes et réflexions conceptuelles'
-            ],
-            [
-                'name' => 'Économie/Droit',
-                'slug' => 'economie-droit',
-                'prompt_template' => 'Traitez cette question d\'économie ou de droit de manière rigoureuse : {question}
-
-Consignes :
-- Définissez les termes techniques
-- Présentez les théories applicables
-- Analysez les enjeux pratiques
-- Référencez les textes de loi si pertinent
-- Proposez une conclusion nuancée',
-                'icon' => '⚖️',
-                'description' => 'Questions d\'économie, droit, finance, politique et institutions'
-            ],
-            [
-                'name' => 'Santé/Médecine',
-                'slug' => 'sante-medecine',
-                'prompt_template' => 'Répondez à cette question de santé ou médecine avec prudence et précision : {question}
-
-Consignes :
-- Basez-vous sur des sources médicales fiables
-- Précisez les limites de votre réponse
-- Recommandez de consulter un professionnel si nécessaire
-- Évitez les diagnostics ou prescriptions
-- Utilisez un langage médical approprié mais accessible',
-                'icon' => '🏥',
-                'description' => 'Questions de santé, médecine, anatomie et bien-être (à titre informatif uniquement)'
-            ],
-            [
-                'name' => 'Arts/Culture',
-                'slug' => 'arts-culture',
-                'prompt_template' => 'Explorez cette question artistique ou culturelle avec sensibilité : {question}
-
-Consignes :
-- Situez dans le contexte artistique/culturel
-- Décrivez les techniques et styles
-- Mentionnez les influences et héritages
-- Analysez l\'impact esthétique/social
-- Respectez la diversité des interprétations',
-                'icon' => '🎨',
-                'description' => 'Questions d\'art, musique, cinéma, architecture et expressions culturelles'
-            ],
-            [
-                'name' => 'Technologie/Innovation',
-                'slug' => 'technologie-innovation',
-                'prompt_template' => 'Analysez cette question technologique en restant à jour : {question}
-
-Consignes :
-- Expliquez les concepts techniques clairement
-- Mentionnez les innovations récentes
-- Analysez les impacts sociétaux
-- Discutez des enjeux éthiques si pertinent
-- Proposez des perspectives d\'évolution',
-                'icon' => '🚀',
-                'description' => 'Questions de technologie, innovation, intelligence artificielle et transformation numérique'
-            ],
-            [
-                'name' => 'Vie Pratique',
-                'slug' => 'vie-pratique',
-                'prompt_template' => 'Donnez des conseils pratiques et utiles pour : {question}
-
-Consignes :
-- Proposez des solutions concrètes
-- Structurez vos conseils par étapes
-- Donnez des exemples pratiques
-- Mentionnez les alternatives possibles
-- Restez bienveillant et constructif',
-                'icon' => '🛠️',
-                'description' => 'Questions pratiques du quotidien, conseils, organisation et résolution de problèmes'
+- Mentionnez les applications pratiques
+- Respectez les règles de sécurité si pertinent',
+                'icon' => '⚗️',
+                'description' => 'Questions de chimie, réactions, molécules et processus chimiques'
             ]
         ];
 
+        // Créer ou mettre à jour chaque domaine
         foreach ($domains as $domainData) {
-            Domain::updateOrCreate(
+            $domain = Domain::updateOrCreate(
                 ['slug' => $domainData['slug']],
                 $domainData
             );
+
+            $status = $domain->wasRecentlyCreated ? 'Créé' : 'Mis à jour';
+            $this->command->line("✅ {$status}: {$domain->name}");
         }
 
-        $this->command->info('✅ Domaines créés avec succès !');
+        $this->command->info("\n🎉 Finalisation terminée !");
         $this->command->table(
-            ['Domaine', 'Slug', 'Icône'],
-            collect($domains)->map(fn($d) => [$d['name'], $d['slug'], $d['icon']])->toArray()
+            ['Domaine', 'Slug', 'Icône', 'ID'],
+            Domain::whereIn('slug', $domainsToKeep)
+                ->get()
+                ->map(fn($d) => [$d->name, $d->slug, $d->icon, $d->id])
+                ->toArray()
         );
+
+        $totalDomains = Domain::count();
+        $this->command->info("📊 Total des domaines: {$totalDomains}");
     }
 }
