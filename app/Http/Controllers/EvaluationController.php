@@ -9,6 +9,7 @@ use App\Services\WolframAlphaService;
 use App\Services\DeepLService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Illuminate\Http\Request;
 
 class EvaluationController extends Controller
 {
@@ -164,9 +165,8 @@ class EvaluationController extends Controller
         }
     }
 
-    /**
-     * Évalue une question (programmation, mathématiques ou traduction) - VERSION CORRIGÉE
-     */
+
+
     public function evaluateQuestion(Question $question)
     {
         try {
@@ -181,76 +181,51 @@ class EvaluationController extends Controller
             // Charger les réponses
             $question->load(['iaResponses', 'domain']);
 
-            // 🎯 DIAGNOSTIC COMPLET AVEC PRIORITÉ AU DOMAINE
+            // 🎯 DIAGNOSTIC COMPLET AVEC PRIORITÉ ABSOLUE AU DOMAINE CHOISI
             $domainName = $question->domain->name ?? 'Inconnu';
             $domainSlug = $question->domain->slug ?? '';
 
-            // Détection STRICTE basée sur le domaine choisi
-            $isProgramming = $question->isProgrammingQuestion();
-            $isMathematical = $question->isMathematicalQuestion();
-            $isTranslation = $this->isTranslationQuestion($question);
-
-            // Force le type selon le domaine si détection ambiguë
-            $forcedType = $question->forceEvaluationTypeByDomain();
-
-            \Log::info('🎯 DIAGNOSTIC ÉVALUATION ULTRA-COMPLET', [
-                'question_id' => $question->id,
-                'domain_name' => $domainName,
-                'domain_slug' => $domainSlug,
-                'auto_detection' => [
-                    'is_programming' => $isProgramming,
-                    'is_mathematical' => $isMathematical,
-                    'is_translation' => $isTranslation,
-                ],
-                'forced_by_domain' => $forcedType,
-                'content_preview' => Str::limit($question->content, 100)
-            ]);
-
-            // 🚨 RÉSOLUTION DES CONFLITS : Priorité absolue au domaine choisi
+            // NOUVEAU : Détection basée UNIQUEMENT sur le domaine choisi par l'utilisateur
+            $userChosenDomain = $question->domain;
             $finalType = 'none';
             $reason = '';
 
-            if ($isTranslation) {
-                // NOUVEAU : Traduction détectée en priorité
-                $finalType = 'translation';
-                $reason = "Domaine traduction détecté: '{$domainName}'";
+            if ($userChosenDomain) {
+                $domainNameLower = strtolower($domainName);
+                $domainSlugLower = strtolower($domainSlug);
 
-            } elseif ($forcedType !== 'none') {
-                // Le domaine impose un type spécifique
-                $finalType = $forcedType;
-                $reason = "Imposé par le domaine '{$domainName}'";
+                // Priorité absolue au domaine choisi par l'utilisateur
+                if (str_contains($domainNameLower, 'traduction') || str_contains($domainSlugLower, 'traduction')) {
+                    $finalType = 'translation';
+                    $reason = "Domaine choisi par l'utilisateur: '{$domainName}'";
 
-                // Mettre à jour les détections pour cohérence
-                $isProgramming = ($forcedType === 'programming');
-                $isMathematical = ($forcedType === 'mathematics');
+                } elseif (str_contains($domainNameLower, 'math') || str_contains($domainNameLower, 'logique') ||
+                    str_contains($domainSlugLower, 'math') || str_contains($domainSlugLower, 'logique')) {
+                    $finalType = 'mathematics';
+                    $reason = "Domaine choisi par l'utilisateur: '{$domainName}'";
 
-            } elseif ($isProgramming && !$isMathematical) {
-                $finalType = 'programming';
-                $reason = 'Détection automatique: programmation uniquement';
+                } elseif (str_contains($domainNameLower, 'programmation') || str_contains($domainNameLower, 'programming') ||
+                    str_contains($domainSlugLower, 'programmation') || str_contains($domainSlugLower, 'programming')) {
+                    $finalType = 'programming';
+                    $reason = "Domaine choisi par l'utilisateur: '{$domainName}'";
 
-            } elseif ($isMathematical && !$isProgramming) {
-                $finalType = 'mathematics';
-                $reason = 'Détection automatique: mathématiques uniquement';
+                } elseif (str_contains($domainNameLower, 'chimie') || str_contains($domainSlugLower, 'chimie')) {
+                    $finalType = 'chemistry';
+                    $reason = "Domaine choisi par l'utilisateur: '{$domainName}'";
 
-            } elseif ($isProgramming && $isMathematical) {
-                // Conflit : priorité à la programmation par défaut
-                $finalType = 'programming';
-                $reason = 'Conflit résolu: priorité donnée à la programmation';
-                $isProgramming = true;
-                $isMathematical = false;
-
-            } else {
-                $finalType = 'none';
-                $reason = 'Question non évaluable automatiquement';
+                } else {
+                    $finalType = 'none';
+                    $reason = "Domaine '{$domainName}' non évaluable automatiquement";
+                }
             }
 
-            \Log::info('✅ DÉCISION FINALE ÉVALUATION', [
+            \Log::info('🎯 DIAGNOSTIC ÉVALUATION - RESPECT DU DOMAINE UTILISATEUR', [
                 'question_id' => $question->id,
-                'final_type' => $finalType,
+                'domain_name' => $domainName,
+                'domain_slug' => $domainSlug,
+                'forced_type' => $finalType,
                 'reason' => $reason,
-                'will_use_wolfram' => ($finalType === 'mathematics'),
-                'will_use_deepl' => ($finalType === 'translation'),
-                'domaine_choisi' => $domainName
+                'content_preview' => Str::limit($question->content, 100)
             ]);
 
             // Vérifier que c'est une question évaluable
@@ -277,48 +252,91 @@ class EvaluationController extends Controller
                     'message' => 'Évaluation déjà existante',
                     'evaluation_id' => $existingEvaluation->id,
                     'evaluation_type' => $existingEvaluation->evaluation_type ?? $finalType,
-                    'already_exists' => true
+                    'forced_type' => $finalType,
+                    'reason' => $reason
                 ]);
             }
 
-            // 🎯 DÉCISION CRUCIALE : Lancer le bon type d'évaluation
-            if ($finalType === 'translation') {
-                \Log::info('🌐 LANCEMENT ÉVALUATION TRADUCTION', [
-                    'question_id' => $question->id,
-                    'domain' => $domainName,
-                    'deepl_will_be_used' => true
-                ]);
-                return $this->evaluateTranslationQuestion($question);
+            // Lancer l'évaluation selon le type forcé par le domaine
+            \Log::info('✅ DÉCISION FINALE ÉVALUATION', [
+                'question_id' => $question->id,
+                'final_type' => $finalType,
+                'reason' => $reason,
+                'will_use_wolfram' => ($finalType === 'mathematics'),
+                'will_use_deepl' => ($finalType === 'translation'),
+                'domaine_choisi' => $domainName
+            ]);
 
-            } elseif ($finalType === 'mathematics') {
-                \Log::info('🧮 LANCEMENT ÉVALUATION MATHÉMATIQUE', [
-                    'question_id' => $question->id,
-                    'domain' => $domainName,
-                    'wolfram_will_be_used' => true
-                ]);
-                return $this->evaluateMathematicalQuestion($question);
+            // CORRECTION : Utiliser les noms de méthodes corrects
+            switch ($finalType) {
+                case 'translation':
+                    return $this->evaluateTranslationQuestion($question);
 
-            } elseif ($finalType === 'programming') {
-                \Log::info('💻 LANCEMENT ÉVALUATION PROGRAMMATION', [
-                    'question_id' => $question->id,
-                    'domain' => $domainName,
-                    'wolfram_will_be_used' => false
-                ]);
-                return $this->evaluateProgrammingQuestion($question);
+                case 'mathematics':
+                    // CORRECTION : Utiliser le nom correct de la méthode existante
+                    return $this->evaluateMathematicalQuestion($question);
 
-            } else {
-                \Log::error('❌ TYPE D\'ÉVALUATION NON SUPPORTÉ', [
-                    'question_id' => $question->id,
-                    'final_type' => $finalType
-                ]);
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Type d\'évaluation non supporté: ' . $finalType
-                ], 400);
+                case 'programming':
+                    return $this->evaluateProgrammingQuestion($question);
+
+                case 'chemistry':
+                    // CORRECTION : Ne plus utiliser app()->bound() mais directement essayer d'instancier
+                    try {
+                        // Test direct d'instanciation du service
+                        $chimieService = app(\App\Services\ChimieEvaluationService::class);
+
+                        \Log::info('✅ Service ChimieEvaluationService disponible', [
+                            'question_id' => $question->id,
+                            'service_class' => get_class($chimieService)
+                        ]);
+
+                        // Si on arrive ici, le service existe, déléguer au ChimieController
+                        $chimieController = app(\App\Http\Controllers\ChimieController::class);
+                        return $chimieController->evaluateChemistryQuestion(request(), $question);
+
+                    } catch (\Exception $e) {
+                        \Log::error('❌ Service ChimieEvaluationService non disponible - FALLBACK', [
+                            'question_id' => $question->id,
+                            'error' => $e->getMessage(),
+                            'file' => $e->getFile(),
+                            'line' => $e->getLine()
+                        ]);
+
+                        // FALLBACK : Utiliser l'évaluation de programmation comme alternative
+                        \Log::info('🔄 FALLBACK: Évaluation chimie → programmation', [
+                            'question_id' => $question->id,
+                            'domain_name' => $domainName
+                        ]);
+
+                        $result = $this->evaluateProgrammingQuestion($question);
+
+                        // Modifier le type d'évaluation pour indiquer que c'était prévu pour la chimie
+                        if ($result instanceof \Illuminate\Http\JsonResponse) {
+                            $data = $result->getData(true);
+                            if ($data['success'] && isset($data['evaluation_id'])) {
+                                // Mettre à jour l'évaluation créée pour indiquer le fallback
+                                $evaluation = Evaluation::find($data['evaluation_id']);
+                                if ($evaluation) {
+                                    $evaluation->update([
+                                        'evaluation_type' => 'chemistry_fallback',
+                                        'commentaire_global' => 'Évaluation programmation utilisée (service chimie indisponible)'
+                                    ]);
+                                }
+                            }
+                        }
+
+                        return $result;
+                    }
+
+                default:
+                    return response()->json([
+                        'success' => false,
+                        'message' => "Type d'évaluation non supporté: {$finalType}"
+                    ], 400);
             }
 
         } catch (\Exception $e) {
-            \Log::error('Erreur lors de l\'évaluation de la question', [
+            \Log::error('Erreur lors de l\'évaluation', [
                 'question_id' => $question->id,
                 'user_id' => Auth::id(),
                 'error' => $e->getMessage(),
@@ -332,9 +350,53 @@ class EvaluationController extends Controller
         }
     }
 
-    /**
-     * NOUVELLE MÉTHODE : Détecte si une question concerne la traduction
-     */
+
+
+    protected function evaluateChemistryQuestion(Question $question)
+    {
+        try {
+            Log::info('🧪 ÉVALUATION CHIMIE DÉMARRÉE', [
+                'question_id' => $question->id,
+                'domain' => $question->domain->name ?? 'N/A'
+            ]);
+
+            // Utiliser le service chimie
+            $chimieService = app(\App\Services\ChimieEvaluationService::class);
+            $result = $chimieService->evaluateChemistryQuestion($question);
+
+            if ($result['success']) {
+                $evaluation = $result['evaluation'];
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Évaluation chimie générée avec succès',
+                    'evaluation_id' => $evaluation->id,
+                    'evaluation_type' => 'chemistry',
+                    'has_wolfram_reference' => !is_null($evaluation->wolfram_reference),
+                    'evaluation' => [
+                        'note_gpt4' => $evaluation->note_gpt4,
+                        'note_deepseek' => $evaluation->note_deepseek,
+                        'note_qwen' => $evaluation->note_qwen,
+                        'meilleure_ia' => $evaluation->meilleure_ia,
+                        'commentaire_global' => $evaluation->commentaire_global,
+                    ]
+                ]);
+            } else {
+                throw new \Exception('Échec de l\'évaluation chimie');
+            }
+
+        } catch (\Exception $e) {
+            Log::error('❌ ERREUR ÉVALUATION CHIMIE', [
+                'question_id' => $question->id,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de l\'évaluation chimie: ' . $e->getMessage()
+            ], 500);
+        }
+    }
     protected function isTranslationQuestion(Question $question): bool
     {
         if (!$question->domain) {
@@ -2011,7 +2073,11 @@ IMPORTANT : Réponds UNIQUEMENT avec le JSON valide, sans texte supplémentaire.
 
 
 
-
+    public function evaluate(Request $request, Question $question)
+    {
+        // Déléguer à evaluateQuestion()
+        return $this->evaluateQuestion($question);
+    }
 
 
 }

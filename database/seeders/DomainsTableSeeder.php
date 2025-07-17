@@ -27,9 +27,9 @@ class DomainsTableSeeder extends Seeder
                 'prompt_template' => "Tu es un traducteur professionnel. Traduis le texte suivant en gardant le ton et le style d'origine :\n{question}"
             ],
             [
-                'name' => 'Médecine',
-                'slug' => 'medecine',
-                'prompt_template' => "Tu es un médecin généraliste basé sur les recommandations de l'OMS. Donne une réponse informative au problème médical suivant, mais indique clairement que l'avis médical professionnel est obligatoire :\n{question}"
+                'name' => 'Chimie',
+                'slug' => 'chimie',
+                'prompt_template' => "Tu es un expert en chimie. Réponds à cette question de chimie en expliquant clairement les concepts :\n{question}\n\nConsignes :\n- Explique les mécanismes chimiques\n- Utilise la nomenclature appropriée\n- Donne des exemples concrets"
             ],
         ];
 

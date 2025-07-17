@@ -398,4 +398,206 @@ class OpenRouterService
             ];
         }
     }
+
+
+
+
+
+
+
+// === À AJOUTER dans app/Services/OpenRouterService.php ===
+// Ajoutez cette méthode dans la classe OpenRouterService
+
+    /**
+     * Méthode sendMessage pour la compatibilité avec ChimieEvaluationService
+     * Alias de queryModel avec format de réponse standardisé
+     */
+    public function sendMessage(string $prompt, string $model): array
+    {
+        Log::info('🤖 Appel sendMessage OpenRouter', [
+            'model' => $model,
+            'prompt_length' => strlen($prompt)
+        ]);
+
+        try {
+            // Utiliser la méthode queryModel existante
+            $result = $this->queryModel($model, $prompt);
+
+            if ($result['status'] === 'success') {
+                Log::info('✅ SendMessage réussi', [
+                    'model' => $model,
+                    'response_time' => $result['response_time'] ?? null
+                ]);
+
+                return [
+                    'success' => true,
+                    'response' => $result['response'],
+                    'response_time' => $result['response_time'] ?? null
+                ];
+            } else {
+                Log::error('❌ SendMessage échoué', [
+                    'model' => $model,
+                    'error' => $result['response'] ?? 'Unknown error'
+                ]);
+
+                return [
+                    'success' => false,
+                    'response' => $result['response'] ?? 'Unknown error',
+                    'response_time' => $result['response_time'] ?? null
+                ];
+            }
+
+        } catch (Exception $e) {
+            Log::error('💥 Exception sendMessage', [
+                'model' => $model,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'success' => false,
+                'response' => 'Exception: ' . $e->getMessage(),
+                'response_time' => null
+            ];
+        }
+    }
+
+    /**
+     * Alternative: méthode sendMessage avec format Claude spécifique
+     */
+    public function sendMessageForClaude(string $prompt, string $model = 'anthropic/claude-3.5-sonnet'): array
+    {
+        Log::info('🧠 Appel Claude via sendMessage', [
+            'model' => $model,
+            'prompt_length' => strlen($prompt)
+        ]);
+
+        $startTime = microtime(true);
+
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => 'Bearer ' . $this->apiKey,
+                'Content-Type' => 'application/json',
+                'HTTP-Referer' => config('app.url'),
+                'X-Title' => config('app.name')
+            ])->timeout(120)->post($this->baseUrl . '/chat/completions', [
+                'model' => $model,
+                'messages' => [
+                    [
+                        'role' => 'user',
+                        'content' => $prompt
+                    ]
+                ],
+                'temperature' => 0.3, // Plus faible pour l'évaluation
+                'max_tokens' => 6000,  // Plus élevé pour les évaluations détaillées
+                'stream' => false
+            ]);
+
+            $responseTime = round((microtime(true) - $startTime), 3);
+
+            if ($response->successful()) {
+                $data = $response->json();
+
+                Log::info('✅ Claude sendMessage réussi', [
+                    'model' => $model,
+                    'response_time' => $responseTime,
+                    'tokens' => $data['usage']['total_tokens'] ?? 'N/A'
+                ]);
+
+                return [
+                    'success' => true,
+                    'response' => $data,
+                    'response_time' => $responseTime
+                ];
+            } else {
+                $errorBody = $response->body();
+
+                try {
+                    $errorJson = $response->json();
+                    $error = $errorJson['error']['message'] ?? $errorBody;
+                } catch (Exception $e) {
+                    $error = $errorBody;
+                }
+
+                Log::error('❌ Claude sendMessage échoué', [
+                    'model' => $model,
+                    'status' => $response->status(),
+                    'error' => $error,
+                    'response_time' => $responseTime
+                ]);
+
+                return [
+                    'success' => false,
+                    'response' => "HTTP {$response->status()}: {$error}",
+                    'response_time' => $responseTime
+                ];
+            }
+
+        } catch (ConnectionException $e) {
+            $responseTime = round((microtime(true) - $startTime), 3);
+
+            Log::error('💥 Connexion Claude échouée', [
+                'model' => $model,
+                'error' => $e->getMessage(),
+                'response_time' => $responseTime
+            ]);
+
+            return [
+                'success' => false,
+                'response' => 'Erreur de connexion: ' . $e->getMessage(),
+                'response_time' => $responseTime
+            ];
+
+        } catch (RequestException $e) {
+            $responseTime = round((microtime(true) - $startTime), 3);
+
+            Log::error('💥 Requête Claude échouée', [
+                'model' => $model,
+                'error' => $e->getMessage(),
+                'response_time' => $responseTime
+            ]);
+
+            return [
+                'success' => false,
+                'response' => 'Erreur de requête: ' . $e->getMessage(),
+                'response_time' => $responseTime
+            ];
+
+        } catch (Exception $e) {
+            $responseTime = round((microtime(true) - $startTime), 3);
+
+            Log::error('💥 Exception Claude', [
+                'model' => $model,
+                'error' => $e->getMessage(),
+                'response_time' => $responseTime,
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return [
+                'success' => false,
+                'response' => 'Exception: ' . $e->getMessage(),
+                'response_time' => $responseTime
+            ];
+        }
+    }
+
+    /**
+     * Méthode utilitaire pour valider un modèle
+     */
+    public function isValidModel(string $model): bool
+    {
+        $validModels = [
+            'anthropic/claude-3.5-sonnet',
+            'anthropic/claude-3-haiku',
+            'openai/gpt-4o',
+            'openai/gpt-4-turbo',
+            'deepseek/deepseek-r1',
+            'qwen/qwen-2.5-72b-instruct'
+        ];
+
+        return in_array($model, $validModels);
+    }
+
+    /**
+     * Obtenir la liste des modèles disponibles
+     */
 }

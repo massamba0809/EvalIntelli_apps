@@ -13,27 +13,31 @@
                 <!-- En-tête avec animation de gradient -->
                 <div class="bg-gradient-to-r {{
                     $evaluation_type === 'mathematics' ? 'from-purple-600 to-indigo-600' :
-                    ($evaluation_type === 'translation' ? 'from-green-600 to-blue-600' : 'from-blue-600 to-purple-600')
+                    ($evaluation_type === 'translation' ? 'from-green-600 to-blue-600' :
+                    ($evaluation_type === 'chemistry' ? 'from-orange-600 to-red-600' : 'from-blue-600 to-purple-600'))
                 }} text-white rounded-xl p-6 mb-8 shadow-lg transform transition-all duration-500 hover:scale-[1.01] animate-gradient-flow">
                     <div class="flex items-center">
                         <div class="text-4xl mr-4 animate-float">
                             {{
                                 $evaluation_type === 'mathematics' ? '🧮' :
-                                ($evaluation_type === 'translation' ? '🌐' : '💻')
+                                ($evaluation_type === 'translation' ? '🌐' :
+                                ($evaluation_type === 'chemistry' ? '🧪' : '💻'))
                             }}
                         </div>
                         <div>
                             <h1 class="text-3xl font-bold mb-2 font-mono tracking-wide">
                                 {{
                                     $evaluation_type === 'mathematics' ? 'Évaluation Mathématique' :
-                                    ($evaluation_type === 'translation' ? 'Évaluation de Traduction' : 'Évaluation de Programmation')
+                                    ($evaluation_type === 'translation' ? 'Évaluation de Traduction' :
+                                    ($evaluation_type === 'chemistry' ? 'Évaluation de Chimie' : 'Évaluation de Programmation'))
                                 }}
                             </h1>
                             <p class="text-blue-100 flex items-center">
                                 <i class="fas fa-robot mr-2 animate-pulse"></i>
                                 {{
                                     $evaluation_type === 'mathematics' ? 'Analyse automatique avec référence Wolfram Alpha' :
-                                    ($evaluation_type === 'translation' ? 'Analyse automatique avec référence DeepL' : 'Analyse automatique de la qualité du code')
+                                    ($evaluation_type === 'translation' ? 'Analyse automatique avec référence DeepL' :
+                                    ($evaluation_type === 'chemistry' ? 'Analyse automatique des réponses chimiques' : 'Analyse automatique de la qualité du code'))
                                 }}
                             </p>
                         </div>
@@ -52,7 +56,8 @@
                         <span class="flex items-center animate-fadeInLeft"><i class="fas fa-tag mr-1"></i> Domaine: <span class="font-medium ml-1">{{ $question->domain->name }}</span></span>
                         <span class="flex items-center animate-fadeInLeft delay-100"><i class="fas fa-code mr-1"></i> Type: <span class="font-medium ml-1">{{
                             $evaluation_type === 'mathematics' ? 'Mathématiques' :
-                            ($evaluation_type === 'translation' ? 'Traduction' : 'Programmation')
+                            ($evaluation_type === 'translation' ? 'Traduction' :
+                            ($evaluation_type === 'chemistry' ? 'Chimie' : 'Programmation'))
                         }}</span></span>
                         <span class="flex items-center animate-fadeInLeft delay-200"><i class="far fa-clock mr-1"></i> Posée le: <span class="font-medium ml-1">{{ $question->created_at->format('d/m/Y à H:i') }}</span></span>
                     </div>
@@ -134,6 +139,21 @@
                         </div>
                     @endif
 
+                    <!-- Section spéciale pour la chimie -->
+                    @if($evaluation_type === 'chemistry')
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-8 transform transition-all duration-500 hover:-translate-y-1 animate-sequence-2">
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                                <i class="fas fa-flask mr-2 text-orange-500 animate-wave"></i>Analyse Chimique
+                                <span class="ml-2 px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-xs rounded-full flex items-center animate-pulse">
+                                    <i class="fas fa-check-circle mr-1"></i>Effectuée
+                                </span>
+                            </h3>
+                            <div class="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-700 rounded-lg p-4 mb-4 animate-fadeIn">
+                                <p class="text-gray-800 dark:text-gray-200">Analyse automatique des réponses chimiques basée sur les données scientifiques et les équations.</p>
+                            </div>
+                        </div>
+                    @endif
+
                     <!-- Résultats de l'évaluation avec animations en cascade -->
                     <div class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-8 transform transition-all duration-500 hover:-translate-y-1 animate-sequence-3">
                         <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
@@ -210,6 +230,8 @@
                                     par Claude
                                 @elseif($evaluation_type === 'translation')
                                     par Claude
+                                @elseif($evaluation_type === 'chemistry')
+                                    par Claude
                                 @else
                                     par Claude
                                 @endif
@@ -239,8 +261,8 @@
                                         </h4>
                                         <div class="bg-white bg-opacity-20 rounded-full px-3 py-1 flex items-center animate-pulse-slow">
                                             <span class="font-bold text-lg text-gray-900 dark:text-blue-950">
-    {{ $score ?? 'N/A' }}/10
-</span>
+                                                {{ $score ?? 'N/A' }}/10
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
@@ -286,10 +308,10 @@
                                                         <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
                                                             <div class="bg-purple-600 h-2 rounded-full transition-all duration-1000 ease-out animate-progress" style="width: 0" data-width="{{ $percentage }}%"></div>
                                                         </div>
-                                                        @if(!empty($criterionAnalysis) && is_string($criterionAnalysis) && strlen($criterionAnalysis) > 10)
-                                                            <div class="mt-1 text-xs text-gray-600 dark:text-gray-400 animate-text-reveal">
-                                                                {{ Str::limit($criterionAnalysis, 120) }}
-                                                            </div>
+                                                        @if(!empty($criterionAnalysis) && is_string($criterionAnalysis) && strlen($criterionAnalysis) > 10))
+                                                        <div class="mt-1 text-xs text-gray-600 dark:text-gray-400 animate-text-reveal">
+                                                            {{ Str::limit($criterionAnalysis, 120) }}
+                                                        </div>
                                                         @endif
                                                     </div>
                                                 @endforeach
@@ -328,7 +350,44 @@
                                                         <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
                                                             <div class="bg-green-600 h-2 rounded-full transition-all duration-1000 ease-out animate-progress" style="width: 0" data-width="{{ $percentage }}%"></div>
                                                         </div>
-                                                        @if(!empty($criterionAnalysis) && is_string($criterionAnalysis) && strlen($criterionAnalysis) > 10)
+                                                        @if(!empty($criterionAnalysis) && is_string($criterionAnalysis) && strlen($criterionAnalysis) > 10))
+                                                        <div class="mt-1 text-xs text-gray-600 dark:text-gray-400 animate-text-reveal">
+                                                            {{ Str::limit($criterionAnalysis, 120) }}
+                                                        </div>
+                                                        @endif
+                                                    </div>
+                                                @endforeach
+                                            @elseif($evaluation_type === 'chemistry')
+                                                <!-- Critères de chimie CORRIGÉS -->
+                                                @foreach([
+                                                    'exactitude_scientifique' => 'Exactitude Scientifique',
+                                                    'completude' => 'Complétude de la Réponse',
+                                                    'clarte_explications' => 'Clarté des Explications',
+                                                    'terminologie_chimique' => 'Terminologie Chimique',
+                                                    'coherence_logique' => 'Cohérence Logique',
+                                                    'references_sources' => 'Références/Sources'
+                                                ] as $criterionKey => $criterionName)
+                                                    @php
+                                                        // 🔧 LOGIQUE CORRIGÉE basée sur la structure JSON trouvée
+                                                        $criterionScore = $details[$criterionKey] ?? 0;
+                                                        $criterionAnalysis = $details[$criterionKey . '_analyse'] ?? '';
+
+                                                        $percentage = ($criterionScore / 2) * 100;
+                                                    @endphp
+
+                                                    <div class="mb-3 animate-slide-in-left" style="animation-delay: {{ $loop->index * 0.1 }}s">
+                                                        <div class="flex justify-between items-center mb-1">
+                                                            <span class="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+                                                                <i class="fas fa-flask mr-1 text-xs text-orange-500"></i>
+                                                                {{ $criterionName }}
+                                                            </span>
+                                                            <span class="text-gray-600 dark:text-gray-400">{{ $criterionScore }}/2</span>
+                                                        </div>
+                                                        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+                                                            <div class="bg-orange-600 h-2 rounded-full transition-all duration-1000 ease-out animate-progress"
+                                                                 style="width: 0" data-width="{{ $percentage }}%"></div>
+                                                        </div>
+                                                        @if(!empty($criterionAnalysis) && strlen($criterionAnalysis) > 3)
                                                             <div class="mt-1 text-xs text-gray-600 dark:text-gray-400 animate-text-reveal">
                                                                 {{ Str::limit($criterionAnalysis, 120) }}
                                                             </div>
@@ -370,10 +429,10 @@
                                                         <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
                                                             <div class="bg-blue-600 h-2 rounded-full transition-all duration-1000 ease-out animate-progress" style="width: 0" data-width="{{ $percentage }}%"></div>
                                                         </div>
-                                                        @if(!empty($criterionAnalysis) && is_string($criterionAnalysis) && strlen($criterionAnalysis) > 10)
-                                                            <div class="mt-1 text-xs text-gray-600 dark:text-gray-400 animate-text-reveal">
-                                                                {{ Str::limit($criterionAnalysis, 120) }}
-                                                            </div>
+                                                        @if(!empty($criterionAnalysis) && is_string($criterionAnalysis) && strlen($criterionAnalysis) > 10))
+                                                        <div class="mt-1 text-xs text-gray-600 dark:text-gray-400 animate-text-reveal">
+                                                            {{ Str::limit($criterionAnalysis, 120) }}
+                                                        </div>
                                                         @endif
                                                     </div>
                                                 @endforeach
@@ -381,20 +440,20 @@
                                         </div>
 
                                         <!-- Hallucination avec animation spéciale -->
-                                        @if($evaluation_type === 'mathematics' || $evaluation_type === 'translation')
+                                        @if($evaluation_type === 'mathematics' || $evaluation_type === 'translation' || $evaluation_type === 'chemistry')
                                             @php
                                                 $hallucinationAnalysis = $details['hallucination_analyse'] ?? null;
                                                 if (empty($hallucinationAnalysis) && isset($details['hallucination']) && is_string($details['hallucination'])) {
                                                     $hallucinationAnalysis = $details['hallucination'];
                                                 }
                                             @endphp
-                                            @if(!empty($hallucinationAnalysis) && is_string($hallucinationAnalysis) && strlen($hallucinationAnalysis) > 10)
-                                                <div class="mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border-l-4 border-red-500 animate-border-alert">
-                                                    <div class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 flex items-center">
-                                                        <i class="fas fa-ghost mr-1 text-red-500 animate-ghost"></i>Détection d'hallucination :
-                                                    </div>
-                                                    <p class="text-sm text-gray-700 dark:text-gray-300 animate-text-reveal">{{ $hallucinationAnalysis }}</p>
+                                            @if(!empty($hallucinationAnalysis) && is_string($hallucinationAnalysis) && strlen($hallucinationAnalysis) > 10))
+                                            <div class="mb-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg border-l-4 border-red-500 animate-border-alert">
+                                                <div class="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 flex items-center">
+                                                    <i class="fas fa-ghost mr-1 text-red-500 animate-ghost"></i>Détection d'hallucination :
                                                 </div>
+                                                <p class="text-sm text-gray-700 dark:text-gray-300 animate-text-reveal">{{ $hallucinationAnalysis }}</p>
+                                            </div>
                                             @endif
                                         @endif
 
@@ -425,7 +484,8 @@
                             <i class="fas fa-comments mr-2 text-blue-500 animate-wave"></i>
                             {{
                                 $evaluation_type === 'mathematics' ? 'Réponses mathématiques' :
-                                ($evaluation_type === 'translation' ? 'Réponses de traduction' : 'Réponses de code')
+                                ($evaluation_type === 'translation' ? 'Réponses de traduction' :
+                                ($evaluation_type === 'chemistry' ? 'Réponses chimiques' : 'Réponses de code'))
                             }} des IA
                         </h3>
 
@@ -454,8 +514,8 @@
                                                 <span class="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 text-xs px-2 py-1 rounded flex items-center animate-pulse-slow">
                                                     <i class="fas fa-star mr-1"></i>Score: {{ $score ?? 'N/A' }}/10
                                                 </span>
-                                                @if($response->response_time)
-                                                    <span class="text-xs text-gray-500 dark:text-gray-400 flex items-center">
+                                                @if($response->response_time))
+                                                <span class="text-xs text-gray-500 dark:text-gray-400 flex items-center">
                                                         <i class="far fa-clock mr-1"></i>{{ number_format($response->response_time, 2) }}s
                                                     </span>
                                                 @endif
@@ -485,7 +545,8 @@
 
                         <div class="grid grid-cols-1 md:grid-cols-{{
                             $evaluation_type === 'mathematics' ? '4' :
-                            ($evaluation_type === 'translation' ? '4' : '3')
+                            ($evaluation_type === 'translation' ? '4' :
+                            ($evaluation_type === 'chemistry' ? '4' : '3'))
                         }} gap-4">
                             <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 animate-tile">
                                 <div class="text-sm text-gray-600 dark:text-gray-400 flex items-center">
@@ -494,7 +555,8 @@
                                 <div class="text-lg font-semibold text-gray-900 dark:text-white">
                                     {{
                                         $evaluation_type === 'mathematics' ? 'Mathématiques' :
-                                        ($evaluation_type === 'translation' ? 'Traduction' : 'Programmation')
+                                        ($evaluation_type === 'translation' ? 'Traduction' :
+                                        ($evaluation_type === 'chemistry' ? 'Chimie' : 'Programmation'))
                                     }}
                                 </div>
                             </div>
@@ -541,6 +603,15 @@
                                         @else
                                             <i class="fas fa-times-circle text-red-500 mr-1 animate-pulse"></i>Non disponible
                                         @endif
+                                    </div>
+                                </div>
+                            @elseif($evaluation_type === 'chemistry')
+                                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 animate-tile delay-300">
+                                    <div class="text-sm text-gray-600 dark:text-gray-400 flex items-center">
+                                        <i class="fas fa-flask mr-1"></i>Analyse chimique
+                                    </div>
+                                    <div class="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+                                        <i class="fas fa-check-circle text-green-500 mr-1 animate-pulse"></i>Effectuée
                                     </div>
                                 </div>
                             @endif
@@ -978,6 +1049,17 @@
             }
         }
 
+        @keyframes slide-in-left {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
         /* Classes d'animation */
         .animate-fadeIn {
             animation: fadeInUp 0.6s ease-out forwards;
@@ -1123,6 +1205,10 @@
 
         .animate-count-up {
             animation: count-up 1.5s ease-out forwards;
+        }
+
+        .animate-slide-in-left {
+            animation: slide-in-left 0.6s ease-out forwards;
         }
 
         /* Délais d'animation */

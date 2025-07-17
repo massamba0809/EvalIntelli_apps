@@ -11,7 +11,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(ChimieEvaluationService::class, function ($app) {
+        return new ChimieEvaluationService(
+            $app->make(OpenRouterService::class),
+            $app->make(WolframAlphaService::class),
+            $app->make(DeepLService::class)
+        );
+    });
     }
 
     /**

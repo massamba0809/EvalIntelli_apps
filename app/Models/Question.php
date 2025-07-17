@@ -61,7 +61,7 @@ class Question extends Model
             return false;
         }
 
-        // 🎯 PRIORITÉ 1 : Vérification STRICTE par nom de domaine
+        // 🎯 PRIORITÉ ABSOLUE : Vérification STRICTE par nom de domaine choisi
         $domainName = strtolower($this->domain->name);
         $domainSlug = strtolower($this->domain->slug ?? '');
 
@@ -75,45 +75,24 @@ class Question extends Model
         // Si le domaine contient ces mots, c'est DÉFINITIVEMENT de la programmation
         foreach ($programmingDomains as $keyword) {
             if (str_contains($domainName, $keyword) || str_contains($domainSlug, $keyword)) {
-                \Log::info('Question PROGRAMMATION détectée par domaine explicite', [
+                \Log::info('Question PROGRAMMATION détectée par domaine choisi', [
                     'question_id' => $this->id,
                     'domain_name' => $this->domain->name,
+                    'domain_slug' => $this->domain->slug,
                     'keyword_matched' => $keyword
                 ]);
                 return true;
             }
         }
 
-        // 🎯 PRIORITÉ 2 : Exclusion explicite des domaines mathématiques
-        $mathDomains = [
-            'mathématiques', 'mathematics', 'math', 'maths',
-            'logique', 'logic', 'calcul', 'calculation',
-            'algèbre', 'algebra', 'géométrie', 'geometry'
-        ];
+        // 🎯 LOGIQUE CORRIGÉE : Si le domaine choisi n'est PAS programmation, retourner false
+        \Log::info('Question NON-PROGRAMMATION : domaine choisi différent', [
+            'question_id' => $this->id,
+            'domain_name' => $this->domain->name,
+            'domain_slug' => $this->domain->slug
+        ]);
 
-        foreach ($mathDomains as $keyword) {
-            if (str_contains($domainName, $keyword) || str_contains($domainSlug, $keyword)) {
-                \Log::info('Question NON-PROGRAMMATION : domaine mathématique détecté', [
-                    'question_id' => $this->id,
-                    'domain_name' => $this->domain->name,
-                    'math_keyword' => $keyword
-                ]);
-                return false;
-            }
-        }
-
-        // 🎯 PRIORITÉ 3 : Analyse du contenu seulement si le domaine est ambigu
-        $hasProgrammingContent = $this->hasProgrammingContent($this->content);
-
-        if ($hasProgrammingContent) {
-            \Log::info('Question PROGRAMMATION détectée par contenu', [
-                'question_id' => $this->id,
-                'domain_name' => $this->domain->name,
-                'content_preview' => Str::limit($this->content, 100)
-            ]);
-        }
-
-        return $hasProgrammingContent;
+        return false;
     }
 
     /**
@@ -126,7 +105,7 @@ class Question extends Model
             return false;
         }
 
-        // 🎯 PRIORITÉ 1 : Vérification STRICTE par nom de domaine
+        // 🎯 PRIORITÉ ABSOLUE : Vérification STRICTE par nom de domaine choisi
         $domainName = strtolower($this->domain->name);
         $domainSlug = strtolower($this->domain->slug ?? '');
 
@@ -134,54 +113,31 @@ class Question extends Model
         $mathDomains = [
             'mathématiques', 'mathematics', 'math', 'maths',
             'logique', 'logic', 'calcul', 'calculation',
-            'algèbre', 'algebra', 'géométrie', 'geometry',
-            'statistique', 'statistics', 'probabilité', 'probability'
+            'algèbre', 'algebra', 'géométrie', 'geometry'
         ];
 
         // Si le domaine contient ces mots, c'est DÉFINITIVEMENT des mathématiques
         foreach ($mathDomains as $keyword) {
             if (str_contains($domainName, $keyword) || str_contains($domainSlug, $keyword)) {
-                \Log::info('Question MATHÉMATIQUES détectée par domaine explicite', [
+                \Log::info('Question MATHÉMATIQUES détectée par domaine choisi', [
                     'question_id' => $this->id,
                     'domain_name' => $this->domain->name,
+                    'domain_slug' => $this->domain->slug,
                     'keyword_matched' => $keyword
                 ]);
                 return true;
             }
         }
 
-        // 🎯 PRIORITÉ 2 : Exclusion explicite des domaines de programmation
-        $programmingDomains = [
-            'programmation', 'programming', 'code', 'coding',
-            'développement', 'development', 'informatique',
-            'web', 'software', 'logiciel', 'application'
-        ];
+        // 🎯 LOGIQUE CORRIGÉE : Si le domaine choisi n'est PAS mathématiques, retourner false
+        \Log::info('Question NON-MATHÉMATIQUES : domaine choisi différent', [
+            'question_id' => $this->id,
+            'domain_name' => $this->domain->name,
+            'domain_slug' => $this->domain->slug
+        ]);
 
-        foreach ($programmingDomains as $keyword) {
-            if (str_contains($domainName, $keyword) || str_contains($domainSlug, $keyword)) {
-                \Log::info('Question NON-MATHÉMATIQUES : domaine programmation détecté', [
-                    'question_id' => $this->id,
-                    'domain_name' => $this->domain->name,
-                    'programming_keyword' => $keyword
-                ]);
-                return false;
-            }
-        }
-
-        // 🎯 PRIORITÉ 3 : Analyse du contenu seulement si le domaine est ambigu
-        $hasMathContent = $this->hasMathematicalContent($this->content);
-
-        if ($hasMathContent) {
-            \Log::info('Question MATHÉMATIQUES détectée par contenu', [
-                'question_id' => $this->id,
-                'domain_name' => $this->domain->name,
-                'content_preview' => Str::limit($this->content, 100)
-            ]);
-        }
-
-        return $hasMathContent;
+        return false;
     }
-
 
     public function isTranslationQuestion(): bool
     {
@@ -189,57 +145,38 @@ class Question extends Model
             return false;
         }
 
-        // 🎯 PRIORITÉ 1 : Vérification STRICTE par nom de domaine
+        // 🎯 PRIORITÉ ABSOLUE : Vérification STRICTE par nom de domaine choisi
         $domainName = strtolower($this->domain->name);
         $domainSlug = strtolower($this->domain->slug ?? '');
 
         // Mots-clés EXPLICITES pour traduction
         $translationDomains = [
             'traduction', 'translation', 'translate', 'traduire',
-            'langues', 'languages', 'linguistique', 'linguistics'
+            'linguistique', 'linguistics', 'langues', 'languages',
+            'langue étrangère', 'foreign language'
         ];
 
         // Si le domaine contient ces mots, c'est DÉFINITIVEMENT de la traduction
         foreach ($translationDomains as $keyword) {
             if (str_contains($domainName, $keyword) || str_contains($domainSlug, $keyword)) {
-                \Log::info('Question TRADUCTION détectée par domaine explicite', [
+                \Log::info('Question TRADUCTION détectée par domaine choisi', [
                     'question_id' => $this->id,
                     'domain_name' => $this->domain->name,
+                    'domain_slug' => $this->domain->slug,
                     'keyword_matched' => $keyword
                 ]);
                 return true;
             }
         }
 
-        // 🎯 PRIORITÉ 2 : Exclusion explicite des domaines programmation/mathématiques
-        $nonTranslationDomains = [
-            'programmation', 'programming', 'code', 'développement',
-            'mathématiques', 'mathematics', 'math', 'logique', 'calcul'
-        ];
+        // 🎯 LOGIQUE CORRIGÉE : Si le domaine choisi n'est PAS traduction, retourner false
+        \Log::info('Question NON-TRADUCTION : domaine choisi différent', [
+            'question_id' => $this->id,
+            'domain_name' => $this->domain->name,
+            'domain_slug' => $this->domain->slug
+        ]);
 
-        foreach ($nonTranslationDomains as $keyword) {
-            if (str_contains($domainName, $keyword) || str_contains($domainSlug, $keyword)) {
-                \Log::info('Question NON-TRADUCTION : domaine non-traduction détecté', [
-                    'question_id' => $this->id,
-                    'domain_name' => $this->domain->name,
-                    'non_translation_keyword' => $keyword
-                ]);
-                return false;
-            }
-        }
-
-        // 🎯 PRIORITÉ 3 : Analyse du contenu seulement si le domaine est ambigu
-        $hasTranslationContent = $this->hasTranslationContent($this->content);
-
-        if ($hasTranslationContent) {
-            \Log::info('Question TRADUCTION détectée par contenu', [
-                'question_id' => $this->id,
-                'domain_name' => $this->domain->name,
-                'content_preview' => Str::limit($this->content, 100)
-            ]);
-        }
-
-        return $hasTranslationContent;
+        return false;
     }
 
     /**
@@ -248,40 +185,15 @@ class Question extends Model
      */
     public function isEvaluableQuestion(): bool
     {
-        $isProgramming = $this->isProgrammingQuestion();
-        $isMathematical = $this->isMathematicalQuestion();
-        $isTranslation = $this->isTranslationQuestion(); // 🌐 NOUVEAU
+        $evaluationType = $this->getEvaluationType();
 
-        // 🚨 CORRECTION : Une question ne peut être qu'un seul type à la fois
-        if (($isProgramming && $isMathematical) ||
-            ($isProgramming && $isTranslation) ||
-            ($isMathematical && $isTranslation)) {
-            \Log::warning('CONFLIT DÉTECTÉ : Question détectée comme plusieurs types', [
-                'question_id' => $this->id,
-                'domain_name' => $this->domain->name,
-                'is_programming' => $isProgramming,
-                'is_mathematical' => $isMathematical,
-                'is_translation' => $isTranslation,
-                'resolution' => 'Priorité donnée selon l\'ordre de vérification'
-            ]);
+        // Une question est évaluable si elle appartient à un domaine supporté
+        $isEvaluable = in_array($evaluationType, ['programming', 'mathematics', 'translation', 'chemistry']);
 
-            // En cas de conflit, priorité : traduction > programmation > mathématiques
-            if ($isTranslation) {
-                $isProgramming = false;
-                $isMathematical = false;
-            } elseif ($isProgramming) {
-                $isMathematical = false;
-            }
-        }
-
-        $isEvaluable = $isProgramming || $isMathematical || $isTranslation;
-
-        \Log::info('Vérification évaluabilité AVEC TRADUCTION', [
+        \Log::info('🔍 VÉRIFICATION ÉVALUABILITÉ', [
             'question_id' => $this->id,
-            'domain_name' => $this->domain->name,
-            'is_programming' => $isProgramming,
-            'is_mathematical' => $isMathematical,
-            'is_translation' => $isTranslation, // 🌐 NOUVEAU
+            'domain_name' => $this->domain->name ?? 'N/A',
+            'evaluation_type' => $evaluationType,
             'is_evaluable' => $isEvaluable
         ]);
 
@@ -294,35 +206,56 @@ class Question extends Model
      */
     public function getEvaluationType(): string
     {
-        // Vérifier dans l'ordre de priorité : traduction > programmation > mathématiques
-        if ($this->isTranslationQuestion()) {
-            // Double-vérification pour éviter les conflits
-            if ($this->isProgrammingQuestion() || $this->isMathematicalQuestion()) {
-                \Log::warning('CONFLIT dans getEvaluationType avec traduction', [
-                    'question_id' => $this->id,
-                    'domain_name' => $this->domain->name,
-                    'resolution' => 'Priorité donnée à la traduction'
-                ]);
-            }
-            return 'translation'; // 🌐 NOUVEAU
-
-        } elseif ($this->isProgrammingQuestion()) {
-            // Double-vérification pour éviter les conflits
-            if ($this->isMathematicalQuestion()) {
-                \Log::warning('CONFLIT dans getEvaluationType', [
-                    'question_id' => $this->id,
-                    'domain_name' => $this->domain->name,
-                    'resolution' => 'Priorité donnée à la programmation car détectée en premier'
-                ]);
-            }
-            return 'programming';
-
-        } elseif ($this->isMathematicalQuestion()) {
-            return 'mathematics';
-
-        } else {
+        if (!$this->domain) {
             return 'none';
         }
+
+        // 🎯 PRIORITÉ ABSOLUE : Basé uniquement sur le domaine choisi par l'utilisateur
+        // L'ordre de priorité ne compte plus car chaque domaine est exclusif
+
+        if ($this->isTranslationQuestion()) {
+            \Log::info('✅ Type d\'évaluation détecté : TRADUCTION', [
+                'question_id' => $this->id,
+                'domain_name' => $this->domain->name ?? 'N/A',
+                'domain_slug' => $this->domain->slug ?? 'N/A'
+            ]);
+            return 'translation';
+        }
+
+        if ($this->isMathematicalQuestion()) {
+            \Log::info('✅ Type d\'évaluation détecté : MATHÉMATIQUES', [
+                'question_id' => $this->id,
+                'domain_name' => $this->domain->name ?? 'N/A',
+                'domain_slug' => $this->domain->slug ?? 'N/A'
+            ]);
+            return 'mathematics';
+        }
+
+        if ($this->isProgrammingQuestion()) {
+            \Log::info('✅ Type d\'évaluation détecté : PROGRAMMATION', [
+                'question_id' => $this->id,
+                'domain_name' => $this->domain->name ?? 'N/A',
+                'domain_slug' => $this->domain->slug ?? 'N/A'
+            ]);
+            return 'programming';
+        }
+
+        if ($this->isChemistryQuestion()) {
+            \Log::info('✅ Type d\'évaluation détecté : CHIMIE', [
+                'question_id' => $this->id,
+                'domain_name' => $this->domain->name ?? 'N/A',
+                'domain_slug' => $this->domain->slug ?? 'N/A'
+            ]);
+            return 'chemistry';
+        }
+
+        // Par défaut : non évaluable
+        \Log::info('⚠️ Type d\'évaluation détecté : AUCUN (domaine non supporté)', [
+            'question_id' => $this->id,
+            'domain_name' => $this->domain->name ?? 'N/A',
+            'domain_slug' => $this->domain->slug ?? 'N/A'
+        ]);
+        return 'none';
     }
     /**
      * MÉTHODE CORRIGÉE : Détection spécifique du contenu de programmation
@@ -889,42 +822,6 @@ class Question extends Model
 
 
 
-    public function forceEvaluationTypeByDomain(): string
-    {
-        if (!$this->domain) {
-            return 'none';
-        }
-
-        $domainName = strtolower($this->domain->name);
-        $domainSlug = strtolower($this->domain->slug ?? '');
-
-        // 🌐 Forcer traduction si domaine explicite (PRIORITÉ 1)
-        $translationDomains = ['traduction', 'translation', 'translate', 'langues', 'linguistics'];
-        foreach ($translationDomains as $keyword) {
-            if (str_contains($domainName, $keyword) || str_contains($domainSlug, $keyword)) {
-                return 'translation';
-            }
-        }
-
-        // Forcer programmation si domaine explicite (PRIORITÉ 2)
-        $programmingDomains = ['programmation', 'programming', 'code', 'développement', 'web'];
-        foreach ($programmingDomains as $keyword) {
-            if (str_contains($domainName, $keyword) || str_contains($domainSlug, $keyword)) {
-                return 'programming';
-            }
-        }
-
-        // Forcer mathématiques si domaine explicite (PRIORITÉ 3)
-        $mathDomains = ['mathématiques', 'math', 'logique', 'calcul'];
-        foreach ($mathDomains as $keyword) {
-            if (str_contains($domainName, $keyword) || str_contains($domainSlug, $keyword)) {
-                return 'mathematics';
-            }
-        }
-
-        return 'none';
-    }
-
 
     public function testDeepLWithQuestionText()
     {
@@ -964,5 +861,87 @@ class Question extends Model
         }
     }
 
+
+    public function isChemistryQuestion(): bool
+    {
+        if (!$this->domain) {
+            return false;
+        }
+
+        // 🎯 PRIORITÉ ABSOLUE : Vérification STRICTE par nom de domaine choisi
+        $domainName = strtolower($this->domain->name);
+        $domainSlug = strtolower($this->domain->slug ?? '');
+
+        // Mots-clés EXPLICITES pour chimie
+        $chemistryDomains = [
+            'chimie', 'chemistry', 'chemical', 'chimique',
+            'biologie', 'biology', 'physique', 'physics',
+            'sciences', 'science'
+        ];
+
+        // Si le domaine contient ces mots, c'est DÉFINITIVEMENT de la chimie
+        foreach ($chemistryDomains as $keyword) {
+            if (str_contains($domainName, $keyword) || str_contains($domainSlug, $keyword)) {
+                \Log::info('Question CHIMIE détectée par domaine choisi', [
+                    'question_id' => $this->id,
+                    'domain_name' => $this->domain->name,
+                    'domain_slug' => $this->domain->slug,
+                    'keyword_matched' => $keyword
+                ]);
+                return true;
+            }
+        }
+
+        // 🎯 LOGIQUE CORRIGÉE : Si le domaine choisi n'est PAS chimie, retourner false
+        \Log::info('Question NON-CHIMIE : domaine choisi différent', [
+            'question_id' => $this->id,
+            'domain_name' => $this->domain->name,
+            'domain_slug' => $this->domain->slug
+        ]);
+
+        return false;
+    }
+
+    private function getDetectionReason($score, $reactionMatches, $formulaMatches, $keywordMatches): string
+    {
+        if ($score >= 8) return 'score_elevé';
+        if ($reactionMatches >= 1) return 'équation_chimique';
+        if ($formulaMatches >= 2) return 'formules_multiples';
+        if ($keywordMatches >= 1 && $formulaMatches >= 1) return 'mots-clés_+_formules';
+        if ($keywordMatches >= 2) return 'mots-clés_multiples';
+        return 'unknown';
+    }
+
+
+
+
+    public function forceEvaluationTypeByDomain(): string
+    {
+        if (!$this->domain) {
+            return 'none';
+        }
+
+        $domainName = strtolower($this->domain->name);
+        $domainSlug = strtolower($this->domain->slug ?? '');
+
+        // Traduction
+        if (str_contains($domainName, 'traduction') || str_contains($domainSlug, 'traduction')) {
+            return 'translation';
+        }
+
+        // Mathématiques
+        if (str_contains($domainName, 'math') || str_contains($domainName, 'logique') ||
+            str_contains($domainSlug, 'math') || str_contains($domainSlug, 'logique')) {
+            return 'mathematics';
+        }
+
+        // Programmation
+        if (str_contains($domainName, 'programmation') || str_contains($domainName, 'programming') ||
+            str_contains($domainSlug, 'programmation') || str_contains($domainSlug, 'programming')) {
+            return 'programming';
+        }
+
+        return 'none';
+    }
 
 }

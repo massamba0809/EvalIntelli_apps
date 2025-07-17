@@ -115,6 +115,9 @@ class Evaluation extends Model
         return null;
     }
 
+
+
+
     /**
      * Accesseur pour evaluation_gpt4
      */
@@ -346,8 +349,13 @@ class Evaluation extends Model
     /**
      * Obtient les détails d'évaluation pour un modèle spécifique par clé courte
      */
-    public function getEvaluationDetails(string $model): ?array
+    public function getEvaluationDetails(?string $model): ?array
     {
+
+
+        if (is_null($model) || empty($model)) {
+            return null;
+        }
         return match($model) {
             'gpt4' => $this->evaluation_gpt4,
             'deepseek' => $this->evaluation_deepseek,
@@ -359,8 +367,12 @@ class Evaluation extends Model
     /**
      * Obtient la note pour un modèle spécifique par clé courte
      */
-    public function getScoreForModel(string $model): ?int
+    public function getScoreForModel(?string $model): ?int
     {
+
+        if (is_null($model) || empty($model)) {
+            return null;
+        }
         return match($model) {
             'gpt4' => $this->note_gpt4,
             'deepseek' => $this->note_deepseek,
@@ -385,10 +397,17 @@ class Evaluation extends Model
     /**
      * Vérifie si une IA spécifique est la meilleure
      */
-    public function isBestAI(string $aiKey): bool
+    public function isBestAI(?string $aiKey): bool
     {
+        if (is_null($aiKey) || empty($aiKey)) {
+            return false;
+        }
         return $this->meilleure_ia === $aiKey;
     }
+
+
+
+
 
     /**
      * Obtient les critères d'évaluation pour une IA selon le type d'évaluation
@@ -483,6 +502,8 @@ class Evaluation extends Model
     {
         return match($this->evaluation_type) {
             'mathematics' => 'Évaluation Mathématique',
+            'translation' => 'Évaluation de Traduction',
+            'chemistry' => 'Évaluation de Chimie',
             'programming' => 'Évaluation de Programmation',
             default => 'Évaluation Générale'
         };
@@ -496,9 +517,16 @@ class Evaluation extends Model
         return match($this->evaluation_type) {
             'mathematics' => '🧮',
             'translation' => '🌐',
+            'chemistry' => '🧪',
             'programming' => '💻',
             default => '📝'
         };
+    }
+
+
+    public function scopeChemistry($query)
+    {
+        return $query->where('evaluation_type', 'chemistry');
     }
 
     /**
@@ -653,6 +681,13 @@ class Evaluation extends Model
                 'complete' => self::mathematics()->complete()->count(),
                 'with_wolfram' => self::mathematics()->withWolframReference()->count(),
                 'average_score' => round(self::mathematics()->complete()->get()->avg(function($eval) {
+                    return ($eval->note_gpt4 + $eval->note_deepseek + $eval->note_qwen) / 3;
+                }), 2),
+            ],
+            'chemistry' => [
+                'total' => self::chemistry()->count(),
+                'complete' => self::chemistry()->complete()->count(),
+                'average_score' => round(self::chemistry()->complete()->get()->avg(function($eval) {
                     return ($eval->note_gpt4 + $eval->note_deepseek + $eval->note_qwen) / 3;
                 }), 2),
             ],

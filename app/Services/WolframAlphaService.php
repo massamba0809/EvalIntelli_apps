@@ -75,6 +75,52 @@ class WolframAlphaService
         return $result;
     }
 
+
+    protected function prepareQuestionVariants(string $question): array
+    {
+        $variants = array_filter(array_unique([
+            'original' => $question,
+            'english' => $this->translateToEnglish($question),
+            'math_notation' => $this->normalizeToMathNotation($question),
+            'simplified' => $this->simplifyQuestion($question),
+            // 🧪 NOUVEAU : Support chimie
+            'chemistry' => $this->normalizeChemistryQuestion($question)
+        ]), function($variant) {
+            return !empty(trim($variant));
+        });
+
+        return $variants;
+    }
+
+
+
+    protected function normalizeChemistryQuestion(string $question): string
+    {
+        $question = strtolower(trim($question));
+
+        // Détecter les questions d'équilibrage
+        if (str_contains($question, 'balance') || str_contains($question, 'équilibrer')) {
+            // Transformer les flèches pour Wolfram
+            $normalized = str_replace(['->', '→', ' -> ', ' → '], ' = ', $question);
+
+            // Ajouter le préfixe pour Wolfram
+            if (!str_contains($normalized, 'balance')) {
+                $normalized = 'balance chemical equation ' . $normalized;
+            }
+
+            return $normalized;
+        }
+
+        // Détecter les formules chimiques
+        if (preg_match('/[A-Z][a-z]?\d*/', $question)) {
+            // Ajouter contexte chimie
+            if (!str_contains($question, 'chemistry') && !str_contains($question, 'chemical')) {
+                return 'chemistry ' . $question;
+            }
+        }
+
+        return $question;
+    }
     /**
      * 🔧 Logique d'exécution principale
      */
@@ -118,17 +164,7 @@ class WolframAlphaService
     /**
      * 📋 Prépare les variantes de question
      */
-    protected function prepareQuestionVariants(string $question): array
-    {
-        return array_filter(array_unique([
-            'original' => $question,
-            'english' => $this->translateToEnglish($question),
-            'math_notation' => $this->normalizeToMathNotation($question),
-            'simplified' => $this->simplifyQuestion($question)
-        ]), function($variant) {
-            return !empty(trim($variant));
-        });
-    }
+
 
     /**
      * 🌐 Traduction française → anglais
@@ -138,7 +174,7 @@ class WolframAlphaService
         $question = strtolower(trim($question));
 
         $translations = [
-            // Questions
+            // Questions mathématiques existantes...
             'calculer' => 'calculate',
             'calcule' => 'calculate',
             'combien fait' => 'what is',
@@ -146,7 +182,20 @@ class WolframAlphaService
             'résoudre' => 'solve',
             'trouve' => 'find',
 
-            // Opérations
+            // 🧪 NOUVEAU : Traductions chimie
+            'équilibrer' => 'balance',
+            'équilibrage' => 'balance',
+            'équation chimique' => 'chemical equation',
+            'réaction' => 'reaction',
+            'formule' => 'formula',
+            'moléculaire' => 'molecular',
+            'synthèse' => 'synthesis',
+            'décomposition' => 'decomposition',
+            'combustion' => 'combustion',
+            'oxydation' => 'oxidation',
+            'réduction' => 'reduction',
+
+            // Opérations existantes...
             'plus' => 'plus',
             'moins' => 'minus',
             'fois' => 'times',
@@ -155,7 +204,7 @@ class WolframAlphaService
             'au carré' => 'squared',
             'au cube' => 'cubed',
 
-            // Fonctions
+            // Fonctions existantes...
             'racine carrée de' => 'square root of',
             'racine carre de' => 'square root of',
             'sinus de' => 'sin',
